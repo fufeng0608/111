@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="记账">
+<title>记账</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f2f2f7;
+    --card: #ffffff;
+    --text: #1c1c1e;
+    --dim: #8e8e93;
+    --line: #e5e5ea;
+    --accent: #0a84ff;
+    --danger: #ff3b30;
+    --soft: #f2f2f7;
+    --mask: rgba(0, 0, 0, .35);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #000000;
+      --card: #1c1c1e;
+      --text: #f2f2f7;
+      --dim: #8e8e93;
+      --line: #2c2c2e;
+      --accent: #0a84ff;
+      --danger: #ff453a;
+      --soft: #2c2c2e;
+      --mask: rgba(0, 0, 0, .6);
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue",
+      "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 100vh;
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));
+  }
+
+  .wrap {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 0 16px;
+  }
+
+  /* ---------- 顶栏 ---------- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0 4px;
+    padding-top: calc(16px + env(safe-area-inset-top));
+  }
+
+  .topbar h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .icon-btn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 20px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .icon-btn:active { background: var(--soft); }
+
+  /* ---------- 概览卡片 ---------- */
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 16px;
+    margin-top: 12px;
+  }
+
+  .sum-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .sum-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .sum-label {
+    font-size: 12px;
+    color: var(--dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sum-val {
+    font-size: clamp(14px, 4.2vw, 18px);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sum-val.over {
+    color: var(--danger);
+    font-size: clamp(11px, 3.4vw, 14px);
+    white-space: normal;
+    line-height: 1.25;
+  }
+
+  .pace {
+    margin: 14px 0 0;
+    font-size: 13px;
+    color: var(--dim);
+  }
+
+  /* ---------- 流水列表 ---------- */
+  .list-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin: 22px 2px 8px;
+  }
+
+  .list-head h2 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .list-head .count {
+    font-size: 12px;
+    color: var(--dim);
+  }
+
+  .list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 10px 8px 10px 14px;
+  }
+
+  .item-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .item-main {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .item-cat {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .item-amt {
+    font-size: 16px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    flex: none;
+  }
+
+  .item-sub {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--dim);
+    min-width: 0;
+  }
+
+  .item-date { flex: none; font-variant-numeric: tabular-nums; }
+
+  .item-note {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .item-del {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    border: none;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--dim);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .item-del:active { background: var(--soft); }
+
+  .empty {
+    text-align: center;
+    color: var(--dim);
+    font-size: 14px;
+    padding: 40px 0;
+    margin: 0;
+  }
+
+  /* ---------- 悬浮按钮 ---------- */
+  .fab {
+    position: fixed;
+    right: 20px;
+    bottom: calc(20px + env(safe-area-inset-bottom));
+    width: 60px;
+    height: 60px;
+    padding: 0 0 4px;
+    border: none;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 30px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 20px rgba(10, 132, 255, .35);
+    cursor: pointer;
+    z-index: 15;
+  }
+
+  .fab:active { transform: scale(.94); }
+
+  @media (min-width: 600px) {
+    .fab { right: calc(50vw - 280px + 20px); }
+  }
+
+  /* ---------- 弹出面板 ---------- */
+  .sheet-wrap {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+  }
+
+  .sheet-wrap[hidden] { display: none; }
+
+  .sheet-mask {
+    position: absolute;
+    inset: 0;
+    background: var(--mask);
+    opacity: 0;
+    transition: opacity .22s ease;
+  }
+
+  .sheet-wrap.open .sheet-mask { opacity: 1; }
+
+  .sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 92vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: var(--card);
+    border-radius: 18px 18px 0 0;
+    padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+    transform: translateY(100%);
+    transition: transform .26s cubic-bezier(.32, .72, 0, 1);
+  }
+
+  .sheet-wrap.open .sheet { transform: translateY(0); }
+
+  @media (min-width: 560px) {
+    .sheet { max-width: 520px; margin: 0 auto; }
+  }
+
+  .sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .sheet-head h2 {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .field {
+    display: block;
+    margin-bottom: 14px;
+  }
+
+  .field-label {
+    display: block;
+    font-size: 13px;
+    color: var(--dim);
+    margin-bottom: 6px;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="date"] {
+    width: 100%;
+    height: 48px;
+    padding: 0 14px;
+    font-size: 16px;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    outline: none;
+  }
+
+  input[type="text"]:focus,
+  input[type="number"]:focus,
+  input[type="date"]:focus {
+    border-color: var(--accent);
+  }
+
+  .amount-input {
+    height: 56px !important;
+    font-size: 24px !important;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .cat-btn {
+    min-height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+
+  .cat-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .primary-btn {
+    width: 100%;
+    min-height: 50px;
+    border: none;
+    border-radius: 14px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 17px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .primary-btn:active { opacity: .85; }
+
+  .btn-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .ghost-btn {
+    min-height: 48px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .ghost-btn:active { background: var(--soft); }
+
+  .hint {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--dim);
+    margin: 18px 0 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="topbar">
+    <h1>记账</h1>
+    <button type="button" class="icon-btn" id="settingsBtn" aria-label="设置">⚙</button>
+  </header>
+
+  <section class="card">
+    <div class="sum-grid">
+      <div class="sum-item">
+        <span class="sum-label">本月预算</span>
+        <span class="sum-val" id="sumBudget">¥0.00</span>
+      </div>
+      <div class="sum-item">
+        <span class="sum-label">本月已支出</span>
+        <span class="sum-val" id="sumSpent">¥0.00</span>
+      </div>
+      <div class="sum-item">
+        <span class="sum-label">剩余</span>
+        <span class="sum-val" id="sumRemain">¥0.00</span>
+      </div>
+    </div>
+    <p class="pace" id="paceText"></p>
+  </section>
+
+  <div class="list-head">
+    <h2>本月流水</h2>
+    <span class="count" id="itemCount"></span>
+  </div>
+  <ul class="list" id="list"></ul>
+  <p class="empty" id="empty" hidden>本月还没有记账</p>
+</div>
+
+<button type="button" class="fab" id="fab" aria-label="记一笔">＋</button>
+
+<!-- 记账面板 -->
+<div class="sheet-wrap" id="entrySheet" hidden>
+  <div class="sheet-mask" data-close></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="entryTitle">
+    <div class="sheet-head">
+      <h2 id="entryTitle">记一笔</h2>
+      <button type="button" class="icon-btn" data-close aria-label="关闭">✕</button>
+    </div>
+
+    <label class="field">
+      <span class="field-label">金额</span>
+      <input id="fAmount" class="amount-input" type="number" inputmode="decimal"
+             step="0.01" min="0" placeholder="0.00">
+    </label>
+
+    <div class="field">
+      <span class="field-label">类别</span>
+      <div class="cats" id="fCats"></div>
+    </div>
+
+    <label class="field">
+      <span class="field-label">备注（可选）</span>
+      <input id="fNote" type="text" maxlength="60" placeholder="比如：食堂午饭">
+    </label>
+
+    <label class="field">
+      <span class="field-label">日期</span>
+      <input id="fDate" type="date">
+    </label>
+
+    <button type="button" class="primary-btn" id="saveBtn">保存</button>
+  </div>
+</div>
+
+<!-- 设置面板 -->
+<div class="sheet-wrap" id="settingsSheet" hidden>
+  <div class="sheet-mask" data-close></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="sheet-head">
+      <h2 id="settingsTitle">设置</h2>
+      <button type="button" class="icon-btn" data-close aria-label="关闭">✕</button>
+    </div>
+
+    <label class="field">
+      <span class="field-label">本月预算（元）</span>
+      <input id="sBudgetInput" type="number" inputmode="decimal" step="0.01" min="0" placeholder="1500">
+    </label>
+    <button type="button" class="primary-btn" id="saveBudgetBtn">保存预算</button>
+
+    <div class="btn-row">
+      <button type="button" class="ghost-btn" id="exportBtn">导出 JSON</button>
+      <button type="button" class="ghost-btn" id="importBtn">导入 JSON</button>
+    </div>
+    <input type="file" id="importFile" accept=".json,application/json" hidden>
+
+    <p class="hint">
+      所有数据都保存在这台设备的浏览器里（localStorage），不会上传到任何服务器。
+      清除浏览器数据、换设备都会丢失，建议偶尔导出备份。
+    </p>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============ 常量 ============ */
+
+  var LEDGER_KEY = 'ledger';
+  var BUDGET_KEY = 'ledger_budget';
+  var DEFAULT_BUDGET = 1500;
+  var CATEGORIES = ['餐饮', '交通', '日用', '学习', '娱乐', '其他'];
+
+  /* ============ 小工具 ============ */
+
+  function $(id) { return document.getElementById(id); }
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+
+  function monthKey(d) {
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1);
+  }
+
+  function newId() {
+    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+  }
+
+  function idTime(id) {
+    var n = parseInt(String(id).split('-')[0], 36);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function round2(n) {
+    return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+  }
+
+  function fmtMoney(n) {
+    var s = Math.abs(Number(n) || 0).toFixed(2).split('.');
+    s[0] = s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return '¥' + s.join('.');
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  /* ============ 数据层 ============ */
+
+  function normalizeItem(it) {
+    if (!it || typeof it !== 'object') return null;
+    var amount = Number(it.amount);
+    if (!isFinite(amount) || amount <= 0) return null;
+
+    var date = (typeof it.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(it.date))
+      ? it.date : todayStr();
+    var category = (typeof it.category === 'string' && it.category.trim())
+      ? it.category.trim() : '其他';
+    var note = typeof it.note === 'string' ? it.note : '';
+    var id = (typeof it.id === 'string' && it.id) ? it.id : newId();
+
+    return {
+      id: id,
+      amount: round2(amount),
+      category: category,
+      note: note,
+      date: date
+    };
+  }
+
+  function loadLedger() {
+    var raw = null;
+    try { raw = localStorage.getItem(LEDGER_KEY); } catch (e) { return []; }
+    if (!raw) return [];
+    try {
+      var parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map(normalizeItem).filter(Boolean);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveLedger() {
+    try {
+      localStorage.setItem(LEDGER_KEY, JSON.stringify(ledger));
+    } catch (e) {
+      alert('保存失败：浏览器存储不可用（可能开了无痕模式）');
+    }
+  }
+
+  function loadBudget() {
+    try {
+      var raw = localStorage.getItem(BUDGET_KEY);
+      if (raw !== null) {
+        var n = Number(raw);
+        if (isFinite(n) && n >= 0) return round2(n);
+      }
+    } catch (e) { /* 忽略 */ }
+    return DEFAULT_BUDGET;
+  }
+
+  function saveBudget() {
+    try { localStorage.setItem(BUDGET_KEY, String(budget)); } catch (e) { /* 忽略 */ }
+  }
+
+  var ledger = loadLedger();
+  var budget = loadBudget();
+  var draftCategory = CATEGORIES[0];
+
+  /* ============ 元素引用 ============ */
+
+  var elList = $('list');
+  var elEmpty = $('empty');
+  var elCount = $('itemCount');
+  var elBudget = $('sumBudget');
+  var elSpent = $('sumSpent');
+  var elRemain = $('sumRemain');
+  var elPace = $('paceText');
+
+  var entrySheet = $('entrySheet');
+  var settingsSheet = $('settingsSheet');
+  var fAmount = $('fAmount');
+  var fNote = $('fNote');
+  var fDate = $('fDate');
+  var fCats = $('fCats');
+  var importFile = $('importFile');
+
+  /* ============ 渲染 ============ */
+
+  function currentMonthItems() {
+    var key = monthKey(new Date());
+    return ledger.filter(function (it) {
+      return typeof it.date === 'string' && it.date.slice(0, 7) === key;
+    });
+  }
+
+  function render() {
+    var now = new Date();
+    var items = currentMonthItems();
+
+    var spent = round2(items.reduce(function (sum, it) {
+      return sum + (Number(it.amount) || 0);
+    }, 0));
+
+    var remaining = round2(budget - spent);
+
+    elBudget.textContent = fmtMoney(budget);
+    elSpent.textContent = fmtMoney(spent);
+
+    if (remaining < 0) {
+      elRemain.textContent = '已超支 ' + fmtMoney(remaining);
+      elRemain.classList.add('over');
+    } else {
+      elRemain.textContent = fmtMoney(remaining);
+      elRemain.classList.remove('over');
+    }
+
+    // 按当前速度还能撑 X 天
+    var dayOfMonth = now.getDate();
+    if (spent <= 0) {
+      elPace.textContent = '本月还没有支出记录';
+    } else if (remaining < 0) {
+      elPace.textContent = '按当前速度还能撑 0 天（已超支）';
+    } else {
+      var avg = spent / dayOfMonth;
+      var days = avg > 0 ? Math.floor(remaining / avg) : 0;
+      elPace.textContent = '按当前速度还能撑 ' + days + ' 天';
+    }
+
+    // 列表：日期倒序
+    var sorted = items.slice().sort(function (a, b) {
+      if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+      return idTime(b.id) - idTime(a.id);
+    });
+
+    elCount.textContent = sorted.length ? sorted.length + ' 笔' : '';
+    elEmpty.hidden = sorted.length > 0;
+
+    elList.innerHTML = sorted.map(function (it) {
+      return '' +
+        '<li class="item">' +
+          '<div class="item-info">' +
+            '<div class="item-main">' +
+              '<span class="item-cat">' + esc(it.category) + '</span>' +
+              '<span class="item-amt">' + fmtMoney(it.amount) + '</span>' +
+            '</div>' +
+            '<div class="item-sub">' +
+              '<span class="item-date">' + esc(it.date) + '</span>' +
+              (it.note ? '<span class="item-note">' + esc(it.note) + '</span>' : '') +
+            '</div>' +
+          '</div>' +
+          '<button type="button" class="item-del" data-del="' + esc(it.id) + '" ' +
+            'aria-label="删除这条记录">删除</button>' +
+        '</li>';
+    }).join('');
+  }
+
+  /* ============ 面板开关 ============ */
+
+  function openSheet(wrap) {
+    clearTimeout(wrap._closeTimer);
+    wrap.hidden = false;
+    requestAnimationFrame(function () {
+      wrap.classList.add('open');
+    });
+  }
+
+  function closeSheet(wrap) {
+    wrap.classList.remove('open');
+    clearTimeout(wrap._closeTimer);
+    wrap._closeTimer = setTimeout(function () {
+      wrap.hidden = true;
+    }, 260);
+  }
+
+  document.addEventListener('click', function (e) {
+    var closer = e.target.closest('[data-close]');
+    if (!closer) return;
+    var wrap = closer.closest('.sheet-wrap');
+    if (wrap) closeSheet(wrap);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    var open = document.querySelectorAll('.sheet-wrap.open');
+    for (var i = 0; i < open.length; i++) closeSheet(open[i]);
+  });
+
+  /* ============ 记账面板 ============ */
+
+  fCats.innerHTML = CATEGORIES.map(function (c) {
+    return '<button type="button" class="cat-btn" data-cat="' + esc(c) + '">' + esc(c) + '</button>';
+  }).join('');
+
+  function setDraftCategory(cat) {
+    draftCategory = cat;
+    var btns = fCats.querySelectorAll('.cat-btn');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('active', btns[i].getAttribute('data-cat') === cat);
+    }
+  }
+
+  fCats.addEventListener('click', function (e) {
+    var btn = e.target.closest('.cat-btn');
+    if (btn) setDraftCategory(btn.getAttribute('data-cat'));
+  });
+
+  $('fab').addEventListener('click', function () {
+    fAmount.value = '';
+    fNote.value = '';
+    fDate.value = todayStr();
+    setDraftCategory(CATEGORIES[0]);
+    openSheet(entrySheet);
+    setTimeout(function () {
+      try { fAmount.focus(); } catch (err) { /* 忽略 */ }
+    }, 300);
+  });
+
+  $('saveBtn').addEventListener('click', function () {
+    var raw = fAmount.value.trim();
+    var amount = Number(raw);
+
+    if (raw === '' || !isFinite(amount) || amount <= 0) {
+      alert('请输入大于 0 的金额');
+      fAmount.focus();
+      return;
+    }
+
+    var date = /^\d{4}-\d{2}-\d{2}$/.test(fDate.value) ? fDate.value : todayStr();
+
+    ledger.push({
+      id: newId(),
+      amount: round2(amount),
+      category: draftCategory,
+      note: fNote.value.trim(),
+      date: date
+    });
+
+    saveLedger();
+    render();
+    closeSheet(entrySheet);
+  });
+
+  /* ============ 删除 ============ */
+
+  elList.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-del]');
+    if (!btn) return;
+
+    var id = btn.getAttribute('data-del');
+    var item = ledger.filter(function (x) { return x.id === id; })[0];
+    if (!item) return;
+
+    var ok = confirm(
+      '确定删除这条记录吗？\n' + item.date + '  ' + item.category + '  ' + fmtMoney(item.amount)
+    );
+    if (!ok) return;
+
+    ledger = ledger.filter(function (x) { return x.id !== id; });
+    saveLedger();
+    render();
+  });
+
+  /* ============ 设置面板 ============ */
+
+  $('settingsBtn').addEventListener('click', function () {
+    $('sBudgetInput').value = String(budget);
+    openSheet(settingsSheet);
+  });
+
+  $('saveBudgetBtn').addEventListener('click', function () {
+    var input = $('sBudgetInput');
+    var raw = input.value.trim();
+    var n = Number(raw);
+
+    if (raw === '' || !isFinite(n) || n < 0) {
+      alert('请输入有效的预算金额');
+      return;
+    }
+
+    budget = round2(n);
+    saveBudget();
+    render();
+    closeSheet(settingsSheet);
+  });
+
+  /* ============ 导出 ============ */
+
+  $('exportBtn').addEventListener('click', function () {
+    var payload = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      budget: budget,
+      ledger: ledger
+    };
+
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'ledger-' + todayStr() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+  });
+
+  /* ============ 导入 ============ */
+
+  $('importBtn').addEventListener('click', function () {
+    importFile.click();
+  });
+
+  importFile.addEventListener('change', function () {
+    var file = importFile.files && importFile.files[0];
+    if (!file) return;
+
+    var reader = new FileReader();
+
+    reader.onload = function () {
+      try {
+        var data = JSON.parse(String(reader.result));
+        var rawItems = null;
+        var importedBudget = null;
+
+        if (Array.isArray(data)) {
+          rawItems = data;
+        } else if (data && Array.isArray(data.ledger)) {
+          rawItems = data.ledger;
+          if (typeof data.budget === 'number' && isFinite(data.budget) && data.budget >= 0) {
+            importedBudget = round2(data.budget);
+          }
+        }
+
+        if (!rawItems) throw new Error('文件格式不正确');
+
+        var items = rawItems.map(normalizeItem).filter(Boolean);
+        if (rawItems.length > 0 && items.length === 0) {
+          throw new Error('没有找到有效的记录');
+        }
+
+        var msg = importedBudget !== null
+          ? '导入 ' + items.length + ' 条记录，预算 ' + fmtMoney(importedBudget) + '？\n（会覆盖当前所有数据）'
+          : '导入 ' + items.length + ' 条记录？\n（会覆盖当前所有数据）';
+
+        if (!confirm(msg)) return;
+
+        ledger = items;
+        saveLedger();
+
+        if (importedBudget !== null) {
+          budget = importedBudget;
+          saveBudget();
+        }
+
+        render();
+        closeSheet(settingsSheet);
+        alert('导入成功');
+      } catch (err) {
+        alert('导入失败：' + ((err && err.message) ? err.message : '文件无法解析'));
+      } finally {
+        importFile.value = '';
+      }
+    };
+
+    reader.onerror = function () {
+      alert('读取文件失败');
+      importFile.value = '';
+    };
+
+    reader.readAsText(file);
+  });
+
+  /* ============ 启动 ============ */
+
+  render();
+})();
+</script>
+</body>
+</html>
